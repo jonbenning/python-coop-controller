@@ -1,0 +1,18 @@
+---
+
+pins:
+  open_limit: 23
+  close_limit: 24
+  obs_limit: 25
+
+location:
+  latitude: 45.3256
+  longitude: 93.9395
+
+schedule:
+  sunrise_offset: 7200
+  sunset_offset: -600
+
+pushover:
+  app_token: "abc123"
+  group_key: "abc123"

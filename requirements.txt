@@ -2,3 +2,5 @@ flask
 flask-restful
 adafruit-circuitpython-motorkit
 suntime
+pyyaml
+schema
