@@ -1,14 +1,19 @@
+#!/usr/bin/python3
+
 import argparse
 import board
 import datetime
+from datetime import datetime 
 import sys
 import yaml
 from suntime import Sun, SunTimeException
 from gpiozero import Button, LED
+import RPi.GPIO as GPIO
 from flask import Flask, jsonify, render_template, request
 from flask_restful import Resource, Api
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
+from gpiozero.pins.native import NativeFactory
 import config_schema
 
 app = Flask(__name__)
@@ -23,10 +28,10 @@ class ChickenPi():
     '''
     def __init__(self,open_limit,close_limit, obs_limit):
         #kit = MotorKit(i2c=board.I2C())
-        self.open_limit_switch = Button(open_limit,bounce_time=0.2)
-        self.close_limit_switch = Button(close_limit,bounce_time=0.2)
-        self.obs_limit_switch = Button(obs_limit,bounce_time=0.2)
-        self.door_travel_steps = self.find_limits()
+        self.open_limit_switch = Button(open_limit,pull_up=False)
+        self.close_limit_switch = Button(close_limit,pull_up=False)
+        self.obs_limit_switch = Button(obs_limit,pull_up=False)
+
 
     def find_limits(self):
         '''This function will open, close, and open the door to find its limits'''
@@ -39,25 +44,28 @@ class ChickenPi():
         step_count = 100
         return step_count
 
+
     def close(self):
         pass
+
 
     def open(self):
         pass
 
-    def monitor(self):
-        self.open_limit_switch.when_pressed = self.button_pressed
-        self.open_limit_switch.when_released = self.button_released
-        self.close_limit_switch.when_pressed = self.button_pressed
-        self.close_limit_switch.when_released = self.button_released
-        self.obs_limit_switch.when_pressed = self.button_pressed
-        self.obs_limit_switch.when_released = self.button_released
 
-    def button_pressed(self):
-        print("button was pressed")
-    
-    def button_released(self):
-        print("button was released")
+    def monitor(self):
+        self.open_limit_switch.when_released = self.nc_limit_opened
+        self.close_limit_switch.when_released = self.nc_limit_opened
+        self.obs_limit_switch.when_released = self.nc_limit_opened
+
+
+    def nc_limit_opened(self,switch):
+        '''
+        Limit switches are Normally Closed (NC). This function triggers when 
+        those switches are opened - i.e. when a limit is hit.
+        '''
+        print(f"limit on pin {switch.pin.number} was opened at {datetime.timestamp(datetime.now())}")
+
 
 class Scheduler():
     '''
@@ -86,6 +94,8 @@ class DoorStatus(Resource):
         return jsonify({"open_limit": open_limit_status,"close_limit": close_limit_status, "obstruction_limit": obs_limit_status})
         #return jsonify({"sunrise": f"{self.schedule.today_sr}","sunset": f"{self.schedule.today_ss}"})
 
+    #def put(self,
+
 def load_config(filename):
     with open(filename, 'r') as file:
         yaml_config = yaml.safe_load(file)
@@ -112,4 +122,4 @@ if __name__=="__main__":
     api.add_resource(DoorStatus, '/api/door', resource_class_kwargs={"schedule": sched,"door": door})
     #api.add_resource(SchedStatus, '/api/status/sched', resource_class_kwargs={"schedule": sched,"door": door})
     door.monitor()
-    app.run(host='0.0.0.0', debug = True)
+    app.run(host='0.0.0.0', debug = True, use_reloader=False)
